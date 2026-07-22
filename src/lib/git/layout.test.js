@@ -44,4 +44,47 @@ describe("assignLanes", () => {
     const { rows } = assignLanes(commits);
     for (const r of rows) expect(r.color).toBeLessThan(PALETTE_SIZE);
   });
+
+  it("maintains tiling invariant: adjacent rows have matching lane flow", () => {
+    // Merge DAG: M merges A and B, both descend from C
+    const { rows } = assignLanes([c("M", ["A", "B"]), c("A", ["C"]), c("B", ["C"]), c("C", [])]);
+
+    const exits = (row) => {
+      const m = {};
+      for (const e of row.outgoing) m[e.toLane] = e.color;
+      for (const p of row.passing) m[p.lane] = p.color;
+      return m;
+    };
+
+    const enters = (row) => {
+      const m = {};
+      for (const e of row.incoming) m[e.fromLane] = e.color;
+      for (const p of row.passing) m[p.lane] = p.color;
+      return m;
+    };
+
+    // For each adjacent pair, exits of current row must equal enters of next row
+    for (let r = 0; r < rows.length - 1; r++) {
+      expect(exits(rows[r])).toEqual(enters(rows[r + 1]));
+    }
+  });
+
+  it("reclaims lanes when commits collapse", () => {
+    // A and B both descend from C, then D is independent
+    // After A and B collapse into C, the freed lane should be reused by D
+    const { rows, laneCount } = assignLanes([
+      c("A", ["C"]),
+      c("B", ["C"]),
+      c("C", []),
+      c("D", []),
+    ]);
+    expect(laneCount).toBe(2);
+    const dRow = rows.find((r) => r.commit.hash === "D");
+    expect(dRow.lane).toBe(0);
+  });
+
+  it("handles empty input", () => {
+    const result = assignLanes([]);
+    expect(result).toEqual({ rows: [], laneCount: 0 });
+  });
 });
