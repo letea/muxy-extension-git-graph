@@ -8,56 +8,32 @@
   },
   "muxy": {
     "$schema": "https://raw.githubusercontent.com/muxy-app/muxy/main/docs/extensions/schema/manifest.schema.json",
-    "commands": [
-      {
-        "action": {
-          "kind": "togglePanel",
-          "panel": "hello"
-        },
-        "defaultShortcut": "cmd+shift+h",
-        "id": "toggle-hello",
-        "title": "Starter: Toggle Hello Panel"
-      },
-      {
-        "id": "refresh-hello",
-        "title": "Starter: Refresh Hello Panel"
-      }
+    "description": "Commit graph across all branches",
+    "permissions": ["git:read", "commands:exec", "panels:write", "tabs:write", "worktrees:read"],
+    "events": ["worktree.headChanged"],
+    "tabTypes": [
+      { "id": "graph", "title": "Git Graph", "entry": "tab/index.html" }
     ],
-    "description": "Git Graph",
     "panels": [
       {
+        "id": "graph",
+        "title": "Git Graph",
         "entry": "panel/index.html",
-        "headerButtons": [
-          {
-            "command": "refresh-hello",
-            "icon": {
-              "symbol": "arrow.clockwise"
-            },
-            "id": "refresh",
-            "tooltip": "Refresh"
-          }
-        ],
-        "icon": {
-          "symbol": "sparkles"
-        },
-        "id": "hello",
         "mode": "pinned",
         "position": "right",
-        "title": "Hello"
+        "icon": { "symbol": "point.3.connected.trianglepath.dotted" },
+        "headerButtons": [
+          { "id": "refresh", "command": "refresh-graph", "icon": { "symbol": "arrow.clockwise" }, "tooltip": "Refresh" }
+        ]
       }
     ],
-    "permissions": [
-      "panels:write"
+    "commands": [
+      { "id": "open-graph-tab", "title": "Git Graph: Open Graph", "action": { "kind": "openTab", "tabType": "graph" }, "defaultShortcut": "cmd+shift+g" },
+      { "id": "toggle-graph-panel", "title": "Git Graph: Toggle Panel", "action": { "kind": "togglePanel", "panel": "graph" } },
+      { "id": "refresh-graph", "title": "Git Graph: Refresh" }
     ],
     "topbarItems": [
-      {
-        "command": "toggle-hello",
-        "icon": {
-          "symbol": "sparkles"
-        },
-        "id": "hello",
-        "tooltip": "Toggle Hello Panel"
-      }
+      { "id": "graph", "command": "open-graph-tab", "icon": { "symbol": "point.3.connected.trianglepath.dotted" }, "tooltip": "Open Git Graph" }
     ]
   },
   "name": "git-graph",
