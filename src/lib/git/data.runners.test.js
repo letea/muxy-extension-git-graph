@@ -45,9 +45,23 @@ describe("loadGraph", () => {
 });
 
 describe("checkout", () => {
-  it("returns ok on exit 0, message on failure", async () => {
+  it("preserves slashes in local branch names", async () => {
+    const res = await checkout("feature/x", "branch");
+    const argv = globalThis.muxy.exec.mock.calls[0][0];
+    expect(argv).toEqual(["git", "checkout", "feature/x"]);
+    expect(res.ok).toBe(true);
+  });
+
+  it("strips remote prefix from remote refs", async () => {
+    const res = await checkout("origin/main", "remote");
+    const argv = globalThis.muxy.exec.mock.calls[0][0];
+    expect(argv).toEqual(["git", "checkout", "main"]);
+    expect(res.ok).toBe(true);
+  });
+
+  it("maps non-zero exitCode to ok:false with stderr message", async () => {
     globalThis.muxy.exec = vi.fn(async () => ({ stdout: "", stderr: "boom", exitCode: 1 }));
-    const res = await checkout("feature/x");
+    const res = await checkout("some-ref", "branch");
     expect(res.ok).toBe(false);
     expect(res.message).toBe("boom");
   });

@@ -100,9 +100,12 @@ export async function loadCommitDetail(hash) {
   return parseCommitShow(stdout);
 }
 
-export async function checkout(name) {
+export async function checkout(name, kind) {
   const cwd = await repoRoot();
-  const local = name.includes("/") ? name.split("/").slice(1).join("/") : name;
-  const { stderr, exitCode } = await muxy.exec(["git", "checkout", local], { cwd });
+  let target = name;
+  if (kind === "remote") {
+    target = name.split("/").slice(1).join("/");
+  }
+  const { stderr, exitCode } = await muxy.exec(["git", "checkout", target], { cwd });
   return { ok: exitCode === 0, message: (stderr || "").trim() };
 }
