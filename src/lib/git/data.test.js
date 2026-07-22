@@ -19,6 +19,21 @@ describe("parseRefs", () => {
     expect(parseRefs("HEAD")).toEqual([{ name: "HEAD", kind: "head" }]);
     expect(parseRefs("")).toEqual([]);
   });
+
+  it("treats slash tokens with unknown first segment as branches", () => {
+    const refs = parseRefs("feature/x");
+    expect(refs).toEqual([{ name: "feature/x", kind: "branch" }]);
+  });
+
+  it("recognizes origin as a remote by default", () => {
+    const refs = parseRefs("origin/main");
+    expect(refs).toEqual([{ name: "origin/main", kind: "remote" }]);
+  });
+
+  it("uses caller-supplied remotes list", () => {
+    const refs = parseRefs("teamfork/main", ["teamfork"]);
+    expect(refs).toEqual([{ name: "teamfork/main", kind: "remote" }]);
+  });
 });
 
 describe("parseGitLog", () => {
@@ -56,6 +71,13 @@ describe("parseCommitShow", () => {
     expect(d.subject).toBe("Fix bug");
     expect(d.body).toBe("Body line 1\nBody line 2");
     expect(d.diff).toContain("diff --git a/x.js");
+  });
+
+  it("returns empty diff when no record separator present", () => {
+    const stdout = `Ada${F}2026-07-22T10:00:00+08:00${F}Subject only${F}`;
+    const d = parseCommitShow(stdout);
+    expect(d.authorName).toBe("Ada");
+    expect(d.diff).toBe("");
   });
 });
 

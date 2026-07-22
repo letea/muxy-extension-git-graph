@@ -2,7 +2,7 @@ export const FIELD = "\x1f";
 export const RECORD = "\x1e";
 export const LOG_FORMAT = "%H%x1f%P%x1f%an%x1f%aI%x1f%D%x1f%s%x1e";
 
-export function parseRefs(decoration) {
+export function parseRefs(decoration, knownRemotes = ["origin"]) {
   const text = (decoration || "").trim();
   if (!text) return [];
   const refs = [];
@@ -16,9 +16,8 @@ export function parseRefs(decoration) {
     } else if (token.startsWith("tag: ")) {
       refs.push({ name: token.slice("tag: ".length), kind: "tag" });
     } else if (token.includes("/")) {
-      const remoteName = token.split("/")[0];
-      // Check for known remote names
-      if (["origin", "upstream", "github", "gitlab"].includes(remoteName)) {
+      const firstSegment = token.split("/")[0];
+      if (knownRemotes.includes(firstSegment)) {
         refs.push({ name: token, kind: "remote" });
       } else {
         refs.push({ name: token, kind: "branch" });
