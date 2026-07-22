@@ -13,6 +13,8 @@
   --color-border: var(--muxy-border);
   --color-input: var(--muxy-border);
   --color-ring: var(--muxy-accent);
+  --color-diff-add: var(--muxy-diff-add);
+  --color-diff-remove: var(--muxy-diff-remove);
   --radius: 6px;
 }
 
