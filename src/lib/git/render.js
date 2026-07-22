@@ -1,0 +1,129 @@
+import { clear, h } from "@/lib/dom";
+import { icon } from "@/lib/icons";
+
+export const ROW_H = 34;
+export const ROW_H_COMPACT = 28;
+export const LANE_GAP = 14;
+export const LANE_PAD = 12;
+export const DOT_R = 4;
+
+// Sanctioned data-viz categorical palette (see Global Constraints). Index 0 is
+// overridden at runtime with --muxy-accent by the app.
+export const LANE_COLORS = [
+  "#4f9dde", "#e0708a", "#57b894", "#d9a441",
+  "#9b7ede", "#4bbfc4", "#e07a4b", "#8aa0b0",
+];
+
+const SVGNS = "http://www.w3.org/2000/svg";
+
+export function laneX(lane, gap = LANE_GAP, pad = LANE_PAD) {
+  return pad + lane * gap;
+}
+
+export function graphWidth(laneCount, gap = LANE_GAP, pad = LANE_PAD) {
+  return pad * 2 + Math.max(0, laneCount - 1) * gap;
+}
+
+function svgEl(tag, attrs) {
+  const node = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+  return node;
+}
+
+function colorFor(laneColors, index) {
+  return laneColors[index % laneColors.length];
+}
+
+function badge(ref, onBranch) {
+  const kindIcon = ref.kind === "tag" ? "tag" : "git-branch";
+  const isHead = ref.head === true;
+  const el = h(
+    "span",
+    {
+      class:
+        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium " +
+        (isHead ? "bg-primary text-primary-foreground" : "bg-accent text-foreground"),
+      title: ref.name,
+    },
+    icon(kindIcon, 11),
+    ref.name,
+  );
+  if (ref.kind === "branch" || ref.kind === "remote") {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onBranch(ref.name, ref.kind);
+    });
+  }
+  return el;
+}
+
+function graphCell(row, laneCount, laneColors, rowH, gap) {
+  const width = graphWidth(laneCount, gap);
+  const svg = svgEl("svg", { width, height: rowH, viewBox: `0 0 ${width} ${rowH}` });
+  const mid = rowH / 2;
+  const nx = laneX(row.lane, gap);
+
+  for (const p of row.passing) {
+    const x = laneX(p.lane, gap);
+    svg.appendChild(svgEl("line", { x1: x, y1: 0, x2: x, y2: rowH, stroke: colorFor(laneColors, p.color), "stroke-width": 1.5 }));
+  }
+  for (const e of row.incoming) {
+    const x = laneX(e.fromLane, gap);
+    svg.appendChild(svgEl("line", { x1: x, y1: 0, x2: nx, y2: mid, stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
+  }
+  for (const e of row.outgoing) {
+    const x = laneX(e.toLane, gap);
+    svg.appendChild(svgEl("line", { x1: nx, y1: mid, x2: x, y2: rowH, stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
+  }
+  svg.appendChild(svgEl("circle", { cx: nx, cy: mid, r: DOT_R, fill: colorFor(laneColors, row.color) }));
+  return svg;
+}
+
+export function renderRow(row, laneCount, ctx) {
+  const { laneColors, compact, onCommit, onBranch } = ctx;
+  const rowH = compact ? ROW_H_COMPACT : ROW_H;
+  const gap = LANE_GAP;
+  const c = row.commit;
+
+  const badges = c.refs.map((r) => badge(r, onBranch));
+  const meta = compact
+    ? []
+    : [
+        h("span", { class: "ml-auto shrink-0 text-[11px] text-muted-foreground" }, c.authorName),
+        h("span", { class: "shrink-0 font-mono text-[11px] text-muted-foreground" }, c.authorDate.slice(0, 10)),
+      ];
+
+  const info = h(
+    "div",
+    { class: "flex min-w-0 flex-1 items-center gap-2 px-2" },
+    ...badges,
+    h("span", { class: "truncate text-[12px] text-foreground", title: c.subject }, c.subject),
+    ...meta,
+    h("span", { class: "shrink-0 font-mono text-[11px] text-muted-foreground" }, c.shortHash),
+  );
+
+  const el = h(
+    "div",
+    {
+      "data-row": c.hash,
+      class: "flex cursor-pointer items-stretch border-b border-border hover:bg-accent",
+      style: `height:${rowH}px`,
+    },
+    graphCell(row, laneCount, laneColors, rowH, gap),
+    info,
+  );
+  el.addEventListener("click", () => onCommit(c.hash));
+  return el;
+}
+
+export function renderGraph(container, layout, ctx) {
+  clear(container);
+  const pairs = [];
+  for (const row of layout.rows) {
+    const el = renderRow(row, layout.laneCount, ctx);
+    container.appendChild(el);
+    pairs.push({ commit: row.commit, el });
+  }
+  return pairs;
+}

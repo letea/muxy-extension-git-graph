@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 export default defineConfig({
   resolve: { alias: { "@": resolve(__dirname, "src") } },
   test: {
-    environment: "node",
-    environmentMatchGlobs: [["**/*.dom.test.js", "jsdom"]],
+    environment: "jsdom",
+    environmentMatchGlobs: [["**/*.test.js", "node"], ["**/*.dom.test.js", "jsdom"]],
   },
 });
