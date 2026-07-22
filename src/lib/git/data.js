@@ -61,3 +61,48 @@ export function parseCommitShow(stdout) {
     diff,
   };
 }
+
+async function repoRoot() {
+  const info = await muxy.git.repoInfo();
+  return info?.root ?? null;
+}
+
+export async function loadRefs() {
+  const info = await muxy.git.repoInfo();
+  const [local, remote] = await Promise.all([muxy.git.branches(), muxy.git.remoteBranches()]);
+  return {
+    root: info?.root ?? null,
+    current: info?.currentBranch ?? null,
+    local: local ?? [],
+    remote: remote ?? [],
+  };
+}
+
+export async function loadGraph({ maxCount = 300, skip = 0 } = {}) {
+  const cwd = await repoRoot();
+  const argv = [
+    "git", "log", "--all", "--date=iso-strict",
+    `--pretty=format:${LOG_FORMAT}`,
+    `--max-count=${maxCount}`, `--skip=${skip}`,
+  ];
+  const { stdout } = await muxy.exec(argv, { cwd });
+  return parseGitLog(stdout);
+}
+
+export async function loadCommitDetail(hash) {
+  const cwd = await repoRoot();
+  const argv = [
+    "git", "show", "--no-color", "-p",
+    `--pretty=format:%an%x1f%aI%x1f%s%x1f%b%x1e`,
+    hash,
+  ];
+  const { stdout } = await muxy.exec(argv, { cwd });
+  return parseCommitShow(stdout);
+}
+
+export async function checkout(name) {
+  const cwd = await repoRoot();
+  const local = name.includes("/") ? name.split("/").slice(1).join("/") : name;
+  const { stderr, exitCode } = await muxy.exec(["git", "checkout", local], { cwd });
+  return { ok: exitCode === 0, message: (stderr || "").trim() };
+}
