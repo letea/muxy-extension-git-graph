@@ -122,3 +122,24 @@ export async function checkout(name, kind) {
   const { stderr, exitCode } = await muxy.exec(["git", "checkout", target], { cwd });
   return { ok: exitCode === 0, message: (stderr || "").trim() };
 }
+
+export async function loadUncommittedStatus() {
+  const cwd = await repoRoot();
+  try {
+    const { stdout } = await muxy.exec(["git", "diff", "--name-only", "HEAD"], { cwd });
+    const files = (stdout || "").split("\n").map((s) => s.trim()).filter(Boolean);
+    return { count: files.length, files };
+  } catch {
+    return { count: 0, files: [] };
+  }
+}
+
+export async function loadUncommittedDiff() {
+  const cwd = await repoRoot();
+  try {
+    const { stdout } = await muxy.exec(["git", "diff", "HEAD", "--no-color"], { cwd });
+    return stdout || "";
+  } catch {
+    return "";
+  }
+}

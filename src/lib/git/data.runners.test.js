@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { loadRefs, loadGraph, loadRemoteNames, checkout } from "@/lib/git/data";
+import { loadRefs, loadGraph, loadRemoteNames, checkout, loadUncommittedStatus, loadUncommittedDiff } from "@/lib/git/data";
 
 const F = "\x1f";
 const R = "\x1e";
@@ -100,5 +100,54 @@ describe("checkout", () => {
     const res = await checkout("some-ref", "branch");
     expect(res.ok).toBe(false);
     expect(res.message).toBe("boom");
+  });
+});
+
+describe("loadUncommittedStatus", () => {
+  it("runs git diff --name-only HEAD and counts files", async () => {
+    globalThis.muxy.exec = vi.fn(async () => ({
+      stdout: "src/a.js\nsrc/b.js\n",
+      stderr: "",
+      exitCode: 0,
+    }));
+    const status = await loadUncommittedStatus();
+    const [argv, opts] = globalThis.muxy.exec.mock.calls[0];
+    expect(argv).toEqual(["git", "diff", "--name-only", "HEAD"]);
+    expect(opts).toEqual({ cwd: "/repo" });
+    expect(status).toEqual({ count: 2, files: ["src/a.js", "src/b.js"] });
+  });
+
+  it("returns count 0 for a clean working tree", async () => {
+    globalThis.muxy.exec = vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 }));
+    expect(await loadUncommittedStatus()).toEqual({ count: 0, files: [] });
+  });
+
+  it("tolerates exec rejection (e.g. no HEAD yet)", async () => {
+    globalThis.muxy.exec = vi.fn(async () => {
+      throw new Error("fatal: bad revision 'HEAD'");
+    });
+    expect(await loadUncommittedStatus()).toEqual({ count: 0, files: [] });
+  });
+});
+
+describe("loadUncommittedDiff", () => {
+  it("runs git diff HEAD --no-color and returns raw stdout", async () => {
+    globalThis.muxy.exec = vi.fn(async () => ({
+      stdout: "diff --git a/x.js b/x.js\n@@ -1 +1 @@\n-old\n+new\n",
+      stderr: "",
+      exitCode: 0,
+    }));
+    const diff = await loadUncommittedDiff();
+    const [argv, opts] = globalThis.muxy.exec.mock.calls[0];
+    expect(argv).toEqual(["git", "diff", "HEAD", "--no-color"]);
+    expect(opts).toEqual({ cwd: "/repo" });
+    expect(diff).toContain("diff --git a/x.js");
+  });
+
+  it("returns empty string on exec rejection", async () => {
+    globalThis.muxy.exec = vi.fn(async () => {
+      throw new Error("fatal: bad revision 'HEAD'");
+    });
+    expect(await loadUncommittedDiff()).toBe("");
   });
 });
