@@ -1,6 +1,6 @@
 import { clear, h } from "@/lib/dom";
 import { icon } from "@/lib/icons";
-import { loadRefs, loadGraph, loadRemoteNames, loadCommitDetail, checkout } from "@/lib/git/data";
+import { loadRefs, loadGraph, loadRemoteNames, loadCommitDetail, checkout, loadUncommittedStatus, loadUncommittedDiff } from "@/lib/git/data";
 import { assignLanes } from "@/lib/git/layout";
 import { matchesQuery, tipHashForBranch, reachableFrom } from "@/lib/git/filter";
 import { renderGraph, LANE_COLORS } from "@/lib/git/render";
@@ -17,6 +17,7 @@ export class GitGraphApp {
     this.query = "";
     this.pairs = [];
     this.maxCount = MAX_COUNT;
+    this.uncommittedCount = 0;
     this.reloadToken = 0;
     this.detailToken = 0;
   }
@@ -97,6 +98,9 @@ export class GitGraphApp {
       this.allCommits = await loadGraph({ maxCount: this.maxCount, knownRemotes });
       if (token !== this.reloadToken) return;
       if (this.allCommits.length === 0) return this.showEmpty("No commits yet");
+      const { count } = await loadUncommittedStatus();
+      if (token !== this.reloadToken) return;
+      this.uncommittedCount = count;
       this.populateBranches();
       this.applyView();
     } catch (err) {
@@ -114,6 +118,13 @@ export class GitGraphApp {
     this.branchSelect.value = this.branchFilter;
   }
 
+  headLaneFor(layout) {
+    const headRow = layout.rows.find(
+      (r) => !r.isUncommitted && r.commit.refs.some((ref) => ref.head === true || ref.kind === "head"),
+    );
+    return headRow ? headRow.lane : null;
+  }
+
   applyView() {
     let commits = this.allCommits;
     if (this.branchFilter) {
@@ -121,11 +132,23 @@ export class GitGraphApp {
       commits = tip ? reachableFrom(this.allCommits, tip) : this.allCommits;
     }
     const layout = assignLanes(commits);
+    if (this.uncommittedCount > 0) {
+      const headLane = this.headLaneFor(layout);
+      layout.rows.unshift({
+        isUncommitted: true,
+        count: this.uncommittedCount,
+        lane: headLane ?? 0,
+        incoming: [],
+        outgoing: headLane === null ? [] : [{ toLane: headLane }],
+        passing: [],
+      });
+    }
     this.pairs = renderGraph(this.graphContainer, layout, {
       laneColors: this.laneColors(),
       compact: this.compact,
       onCommit: (hash) => this.openDetail(hash),
       onBranch: (name, kind) => this.checkoutRef(name, kind),
+      onUncommittedClick: () => this.openUncommittedDetail(),
     });
     if (this.allCommits.length >= this.maxCount) {
       this.graphContainer.appendChild(this.truncationFooter());
@@ -193,6 +216,43 @@ export class GitGraphApp {
           ),
           d.body ? h("pre", { class: "whitespace-pre-wrap text-[12px] text-foreground" }, d.body) : null,
           h("pre", { class: "overflow-auto rounded-md border border-border bg-surface p-2 font-mono text-[11px] text-foreground" }, d.diff || "(no changes)"),
+        ),
+      );
+    } catch (err) {
+      if (token !== this.detailToken) return;
+      clear(this.detailDrawer);
+      this.detailDrawer.appendChild(h("div", { class: "p-3 text-[12px] text-diff-remove" }, String(err?.message || err)));
+    }
+  }
+
+  async openUncommittedDetail() {
+    const token = ++this.detailToken;
+    this.detailDrawer.classList.remove("hidden");
+    clear(this.detailDrawer);
+    this.detailDrawer.appendChild(h("div", { class: "p-3 text-[12px] text-muted-foreground" }, "Loading…"));
+    try {
+      const [{ count, files }, diff] = await Promise.all([loadUncommittedStatus(), loadUncommittedDiff()]);
+      if (token !== this.detailToken) return;
+      clear(this.detailDrawer);
+      const close = h(
+        "button",
+        { type: "button", class: "flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent", title: "Close", onclick: () => this.detailDrawer.classList.add("hidden") },
+        icon("close", 13),
+      );
+      this.detailDrawer.appendChild(
+        h(
+          "div",
+          { class: "flex flex-col gap-2 p-3" },
+          h("div", { class: "flex items-start justify-between gap-2" },
+            h("div", { class: "text-[14px] font-semibold text-foreground" }, `Uncommitted Changes (${count})`),
+            close,
+          ),
+          h(
+            "ul",
+            { class: "flex flex-col gap-0.5 font-mono text-[11px] text-muted-foreground" },
+            ...files.map((f) => h("li", null, f)),
+          ),
+          h("pre", { class: "overflow-auto rounded-md border border-border bg-surface p-2 font-mono text-[11px] text-foreground" }, diff || "(no changes)"),
         ),
       );
     } catch (err) {
