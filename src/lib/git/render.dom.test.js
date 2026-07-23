@@ -82,11 +82,11 @@ describe("renderGraph", () => {
     expect(clicked).toEqual(["aaa111", "aaa111"]);
   });
 
-  it("colors a tag badge with its commit's lane color, not the uniform accent", () => {
+  it("colors non-HEAD branch, remote, and tag badges by their commit's lane color", () => {
     // Two independent-root commits land on two different lanes/colors.
     const commits = [
       c("aaa111", [], [{ name: "v1.0", kind: "tag" }]),
-      c("bbb222", [], [{ name: "main", kind: "branch" }]),
+      c("bbb222", [], [{ name: "main", kind: "branch" }, { name: "origin/main", kind: "remote" }]),
       c("ccc333", ["aaa111"], []), // forces aaa111 and bbb222 into distinct lanes
     ];
     const laneColors = ["#111111", "#222222", "#333333", "#444444", "#555555", "#666666", "#777777", "#888888"];
@@ -100,19 +100,20 @@ describe("renderGraph", () => {
     });
     const badges = [...container.querySelectorAll("[data-row] span")];
     const tagBadge = badges.find((b) => b.textContent.includes("v1.0"));
-    const branchBadge = badges.find((b) => b.textContent.includes("main"));
+    const branchBadge = badges.find((b) => b.textContent.includes("main") && !b.textContent.includes("origin"));
+    const remoteBadge = badges.find((b) => b.textContent.includes("origin/main"));
 
-    const tagRow = tagBadge.closest("[data-row]");
-    const rowIndex = layout.rows.findIndex((r) => r.commit.hash === tagRow.dataset.row);
-    const expectedHex = laneColors[layout.rows[rowIndex].color % laneColors.length];
-    const probe = document.createElement("div");
-    probe.style.backgroundColor = expectedHex;
-
-    expect(tagBadge.style.backgroundColor).toBe(probe.style.backgroundColor);
-    expect(tagBadge.className).not.toContain("bg-accent");
-    // A non-tag, non-HEAD badge keeps the uniform accent style, unaffected.
-    expect(branchBadge.className).toContain("bg-accent");
-    expect(branchBadge.style.backgroundColor).toBe("");
+    const expectFor = (badge, hash) => {
+      const row = layout.rows.find((r) => r.commit.hash === hash);
+      const expectedHex = laneColors[row.color % laneColors.length];
+      const probe = document.createElement("div");
+      probe.style.backgroundColor = expectedHex;
+      expect(badge.style.backgroundColor).toBe(probe.style.backgroundColor);
+      expect(badge.className).not.toContain("bg-accent");
+    };
+    expectFor(tagBadge, "aaa111");
+    expectFor(branchBadge, "bbb222");
+    expectFor(remoteBadge, "bbb222");
   });
 
   it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {

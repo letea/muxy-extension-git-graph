@@ -37,9 +37,10 @@ function colorFor(laneColors, index) {
 function badge(ref, onBranch, laneColorHex) {
   const kindIcon = ref.kind === "tag" ? "tag" : "git-branch";
   const isHead = ref.head === true || ref.kind === "head";
-  // A tag has no branch of its own — color it like the branch/lane its
-  // commit belongs to, instead of the uniform badge fill other refs get.
-  const useLaneColor = !isHead && ref.kind === "tag" && Boolean(laneColorHex);
+  // Color every non-HEAD ref (branch, remote, tag) like the lane its commit
+  // belongs to, so a badge visually matches the graph line beneath it. HEAD
+  // keeps its own prominent accent fill as a "where am I" marker.
+  const useLaneColor = !isHead && Boolean(laneColorHex);
   const el = h(
     "span",
     {
