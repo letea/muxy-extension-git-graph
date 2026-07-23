@@ -17,6 +17,8 @@ export class GitGraphApp {
     this.query = "";
     this.pairs = [];
     this.maxCount = MAX_COUNT;
+    this.reloadToken = 0;
+    this.detailToken = 0;
   }
 
   async start() {
@@ -83,19 +85,22 @@ export class GitGraphApp {
   }
 
   async reload() {
+    const token = ++this.reloadToken;
     this.showMessage("Loading…");
     try {
       this.refs = await loadRefs();
+      if (token !== this.reloadToken) return;
       if (!this.refs.root) return this.showEmpty("Not a git repository");
       const knownRemotes = this.refs.remote.length
         ? [...new Set(this.refs.remote.map((r) => r.split("/")[0]))]
         : ["origin"];
       this.allCommits = await loadGraph({ maxCount: this.maxCount, knownRemotes });
+      if (token !== this.reloadToken) return;
       if (this.allCommits.length === 0) return this.showEmpty("No commits yet");
       this.populateBranches();
       this.applyView();
     } catch (err) {
-      this.showError(err);
+      if (token === this.reloadToken) this.showError(err);
     }
   }
 
@@ -160,11 +165,13 @@ export class GitGraphApp {
   }
 
   async openDetail(hash) {
+    const token = ++this.detailToken;
     this.detailDrawer.classList.remove("hidden");
     clear(this.detailDrawer);
     this.detailDrawer.appendChild(h("div", { class: "p-3 text-[12px] text-muted-foreground" }, "Loading…"));
     try {
       const d = await loadCommitDetail(hash);
+      if (token !== this.detailToken) return;
       clear(this.detailDrawer);
       const close = h(
         "button",
@@ -185,6 +192,7 @@ export class GitGraphApp {
         ),
       );
     } catch (err) {
+      if (token !== this.detailToken) return;
       clear(this.detailDrawer);
       this.detailDrawer.appendChild(h("div", { class: "p-3 text-[12px] text-diff-remove" }, String(err?.message || err)));
     }
