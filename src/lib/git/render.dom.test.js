@@ -56,6 +56,32 @@ describe("renderGraph", () => {
     expect(headBadge.className).toContain("bg-primary");
   });
 
+  it("makes rows keyboard-operable (role, tabindex, Enter/Space triggers onCommit)", () => {
+    const commits = [c("aaa111", ["bbb222"], []), c("bbb222", [])];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    const clicked = [];
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: (hash) => clicked.push(hash),
+      onBranch: () => {},
+    });
+    const row = container.querySelector("[data-row]");
+    expect(row.getAttribute("role")).toBe("button");
+    expect(row.getAttribute("tabindex")).toBe("0");
+
+    row.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(clicked).toEqual(["aaa111"]);
+
+    row.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    expect(clicked).toEqual(["aaa111", "aaa111"]);
+
+    // an unrelated key must not trigger onCommit
+    row.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(clicked).toEqual(["aaa111", "aaa111"]);
+  });
+
   it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {
     const commits = [c("aaa111", ["bbb222"], [{ name: "main", kind: "branch", head: true }]), c("bbb222", [])];
     const layout = assignLanes(commits);

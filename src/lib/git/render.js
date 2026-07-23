@@ -48,6 +48,9 @@ function badge(ref, onBranch) {
     icon(kindIcon, 11),
     ref.name,
   );
+  // Only branch/remote refs are checkout targets in this UI — a tag click
+  // would need different UX (checking out a tag detaches HEAD), so tags
+  // intentionally get no click handler here.
   if (ref.kind === "branch" || ref.kind === "remote") {
     el.style.cursor = "pointer";
     el.addEventListener("click", (e) => {
@@ -107,6 +110,8 @@ export function renderRow(row, laneCount, ctx) {
     "div",
     {
       "data-row": c.hash,
+      role: "button",
+      tabindex: 0,
       class: "flex cursor-pointer items-stretch border-b border-border hover:bg-accent",
       style: `height:${rowH}px`,
     },
@@ -114,6 +119,12 @@ export function renderRow(row, laneCount, ctx) {
     info,
   );
   el.addEventListener("click", () => onCommit(c.hash));
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onCommit(c.hash);
+    }
+  });
   return el;
 }
 
