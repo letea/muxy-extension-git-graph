@@ -186,7 +186,11 @@ export class GitGraphApp {
             h("div", { class: "text-[14px] font-semibold text-foreground" }, d.subject),
             close,
           ),
-          h("div", { class: "font-mono text-[11px] text-muted-foreground" }, `${hash.slice(0, 10)} · ${d.authorName} · ${d.authorDate.slice(0, 10)}`),
+          h(
+            "div",
+            { class: "font-mono text-[11px] text-muted-foreground" },
+            `${hash.slice(0, 10)} · ${d.authorName} · ${d.authorDate.slice(0, 10)} ${d.authorDate.slice(11, 16)}`,
+          ),
           d.body ? h("pre", { class: "whitespace-pre-wrap text-[12px] text-foreground" }, d.body) : null,
           h("pre", { class: "overflow-auto rounded-md border border-border bg-surface p-2 font-mono text-[11px] text-foreground" }, d.diff || "(no changes)"),
         ),

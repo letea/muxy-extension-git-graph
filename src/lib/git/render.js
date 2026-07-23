@@ -146,7 +146,11 @@ export function renderRow(row, laneCount, ctx) {
     ? []
     : [
         h("span", { class: "ml-auto shrink-0 text-[11px] text-muted-foreground" }, c.authorName),
-        h("span", { class: "shrink-0 font-mono text-[11px] text-muted-foreground" }, c.authorDate.slice(0, 10)),
+        h(
+          "span",
+          { class: "shrink-0 font-mono text-[11px] text-muted-foreground" },
+          `${c.authorDate.slice(0, 10)} ${c.authorDate.slice(11, 16)}`,
+        ),
       ];
 
   const info = h(
