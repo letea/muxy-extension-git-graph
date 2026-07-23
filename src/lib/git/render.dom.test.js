@@ -38,6 +38,24 @@ describe("renderGraph", () => {
     expect(clicked[0]).toBe("aaa111");
   });
 
+  it("gives a detached HEAD badge the same prominent style as an attached HEAD branch", () => {
+    const attached = c("aaa111", [], [{ name: "main", kind: "branch", head: true }]);
+    const detached = c("bbb222", [], [{ name: "HEAD", kind: "head" }]);
+    const layout = assignLanes([attached, detached]);
+    const container = document.createElement("div");
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+    });
+    const badges = [...container.querySelectorAll("[data-row] span")];
+    const mainBadge = badges.find((b) => b.textContent.includes("main"));
+    const headBadge = badges.find((b) => b.textContent.includes("HEAD"));
+    expect(mainBadge.className).toContain("bg-primary");
+    expect(headBadge.className).toContain("bg-primary");
+  });
+
   it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {
     const commits = [c("aaa111", ["bbb222"], [{ name: "main", kind: "branch", head: true }]), c("bbb222", [])];
     const layout = assignLanes(commits);

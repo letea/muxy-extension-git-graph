@@ -36,7 +36,7 @@ function colorFor(laneColors, index) {
 
 function badge(ref, onBranch) {
   const kindIcon = ref.kind === "tag" ? "tag" : "git-branch";
-  const isHead = ref.head === true;
+  const isHead = ref.head === true || ref.kind === "head";
   const el = h(
     "span",
     {
