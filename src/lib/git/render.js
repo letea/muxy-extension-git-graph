@@ -43,6 +43,37 @@ function sortRefs(refs) {
   return [...refs].sort((a, b) => (REF_KIND_ORDER[a.kind] ?? 3) - (REF_KIND_ORDER[b.kind] ?? 3));
 }
 
+function remoteBranchName(remoteRef) {
+  return remoteRef.name.slice(remoteRef.name.indexOf("/") + 1);
+}
+
+function remoteName(remoteRef) {
+  return remoteRef.name.slice(0, remoteRef.name.indexOf("/"));
+}
+
+// A remote-tracking ref adds no information once its local branch is also
+// present on the same commit — fold it into one badge, e.g. "3.0.146 |
+// origin", so the same branch isn't shown twice. Checkout still targets the
+// local branch name.
+function mergeLocalRemotePairs(refs) {
+  const branches = refs.filter((r) => r.kind === "branch");
+  const remotes = refs.filter((r) => r.kind === "remote");
+  const others = refs.filter((r) => r.kind !== "branch" && r.kind !== "remote");
+
+  const merged = branches.map((b) => {
+    const tracking = remotes.filter((r) => remoteBranchName(r) === b.name);
+    if (!tracking.length) return b;
+    return {
+      name: `${b.name} | ${tracking.map(remoteName).join(", ")}`,
+      kind: "branch",
+      head: b.head,
+      checkoutName: b.name,
+    };
+  });
+  const unmatchedRemotes = remotes.filter((r) => !branches.some((b) => remoteBranchName(r) === b.name));
+  return [...merged, ...unmatchedRemotes, ...others];
+}
+
 function badge(ref, onBranch, laneColorHex) {
   const kindIcon = ref.kind === "tag" ? "tag" : "git-branch";
   const isHead = ref.head === true || ref.kind === "head";
@@ -69,7 +100,7 @@ function badge(ref, onBranch, laneColorHex) {
     el.style.cursor = "pointer";
     el.addEventListener("click", (e) => {
       e.stopPropagation();
-      onBranch(ref.name, ref.kind);
+      onBranch(ref.checkoutName ?? ref.name, ref.kind);
     });
   }
   return el;
@@ -104,7 +135,7 @@ export function renderRow(row, laneCount, ctx) {
   const c = row.commit;
 
   const nodeColorHex = colorFor(laneColors, row.color);
-  const badges = sortRefs(c.refs).map((r) => badge(r, onBranch, nodeColorHex));
+  const badges = sortRefs(mergeLocalRemotePairs(c.refs)).map((r) => badge(r, onBranch, nodeColorHex));
   const meta = compact
     ? []
     : [

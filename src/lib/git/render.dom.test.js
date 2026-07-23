@@ -84,9 +84,11 @@ describe("renderGraph", () => {
 
   it("colors non-HEAD branch, remote, and tag badges by their commit's lane color", () => {
     // Two independent-root commits land on two different lanes/colors.
+    // "origin/other" deliberately doesn't match "main", so branch and remote
+    // stay separate badges here (see the merge-specific tests below).
     const commits = [
       c("aaa111", [], [{ name: "v1.0", kind: "tag" }]),
-      c("bbb222", [], [{ name: "main", kind: "branch" }, { name: "origin/main", kind: "remote" }]),
+      c("bbb222", [], [{ name: "main", kind: "branch" }, { name: "origin/other", kind: "remote" }]),
       c("ccc333", ["aaa111"], []), // forces aaa111 and bbb222 into distinct lanes
     ];
     const laneColors = ["#111111", "#222222", "#333333", "#444444", "#555555", "#666666", "#777777", "#888888"];
@@ -101,7 +103,7 @@ describe("renderGraph", () => {
     const badges = [...container.querySelectorAll("[data-row] span")];
     const tagBadge = badges.find((b) => b.textContent.includes("v1.0"));
     const branchBadge = badges.find((b) => b.textContent.includes("main") && !b.textContent.includes("origin"));
-    const remoteBadge = badges.find((b) => b.textContent.includes("origin/main"));
+    const remoteBadge = badges.find((b) => b.textContent.includes("origin/other"));
 
     const expectFor = (badge, hash) => {
       const row = layout.rows.find((r) => r.commit.hash === hash);
@@ -139,7 +141,10 @@ describe("renderGraph", () => {
   });
 
   it("keeps a HEAD branch first among branches, preserving decoration order within each tier", () => {
-    // Mirrors git's "HEAD -> main, origin/main, tag: v1.0, feature/x" decoration order.
+    // Mirrors git's "HEAD -> main, origin/main, tag: v1.0, feature/x" decoration
+    // order. main/origin/main are a matching pair, so they merge into one badge
+    // (see the merge-specific tests below) — feature/x has no remote and stays
+    // its own badge, still sorted into the same branch tier, after the merged one.
     const commits = [
       c("aaa111", [], [
         { name: "main", kind: "branch", head: true },
@@ -159,7 +164,93 @@ describe("renderGraph", () => {
     const badgeTexts = [...container.querySelectorAll("[data-row] span")]
       .filter((s) => s.querySelector("svg"))
       .map((b) => b.textContent);
-    expect(badgeTexts).toEqual(["main", "feature/x", "origin/main", "v1.0"]);
+    expect(badgeTexts).toEqual(["main | origin", "feature/x", "v1.0"]);
+  });
+
+  it("merges a local branch with its matching remote into one badge", () => {
+    const commits = [
+      c("aaa111", [], [
+        { name: "3.0.146", kind: "branch" },
+        { name: "origin/3.0.146", kind: "remote" },
+      ]),
+    ];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    const branchCalls = [];
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: (name, kind) => branchCalls.push({ name, kind }),
+    });
+    const badges = [...container.querySelectorAll("[data-row] span")].filter((s) => s.querySelector("svg"));
+    expect(badges).toHaveLength(1);
+    expect(badges[0].textContent).toBe("3.0.146 | origin");
+    badges[0].click();
+    // checkout must target the local branch name, not the merged label
+    expect(branchCalls).toEqual([{ name: "3.0.146", kind: "branch" }]);
+  });
+
+  it("merges multiple remotes tracking the same local branch", () => {
+    const commits = [
+      c("aaa111", [], [
+        { name: "main", kind: "branch" },
+        { name: "origin/main", kind: "remote" },
+        { name: "upstream/main", kind: "remote" },
+      ]),
+    ];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+    });
+    const badges = [...container.querySelectorAll("[data-row] span")].filter((s) => s.querySelector("svg"));
+    expect(badges).toHaveLength(1);
+    expect(badges[0].textContent).toBe("main | origin, upstream");
+  });
+
+  it("leaves an unmatched local branch or remote as its own badge", () => {
+    const commits = [
+      c("aaa111", [], [{ name: "main", kind: "branch" }]),
+      c("bbb222", [], [{ name: "origin/develop", kind: "remote" }]),
+    ];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    const branchCalls = [];
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: (name, kind) => branchCalls.push({ name, kind }),
+    });
+    const badges = [...container.querySelectorAll("[data-row] span")].filter((s) => s.querySelector("svg"));
+    expect(badges.map((b) => b.textContent)).toEqual(["main", "origin/develop"]);
+    badges[1].click();
+    expect(branchCalls).toEqual([{ name: "origin/develop", kind: "remote" }]);
+  });
+
+  it("keeps HEAD prominence and branch sort tier on a merged badge, alongside a tag", () => {
+    const commits = [
+      c("aaa111", [], [
+        { name: "v1.0", kind: "tag" },
+        { name: "origin/main", kind: "remote" },
+        { name: "main", kind: "branch", head: true },
+      ]),
+    ];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+    });
+    const badges = [...container.querySelectorAll("[data-row] span")].filter((s) => s.querySelector("svg"));
+    expect(badges.map((b) => b.textContent)).toEqual(["main | origin", "v1.0"]);
+    expect(badges[0].className).toContain("bg-primary");
   });
 
   it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {
