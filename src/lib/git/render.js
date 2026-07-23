@@ -14,6 +14,8 @@ export const LANE_COLORS = [
   "#9b7ede", "#4bbfc4", "#e07a4b", "#8aa0b0",
 ];
 
+export const UNCOMMITTED_GRAY = "#8aa0b0";
+
 const SVGNS = "http://www.w3.org/2000/svg";
 
 export function laneX(lane, gap = LANE_GAP, pad = LANE_PAD) {
@@ -114,6 +116,51 @@ function isHeadCommit(refs) {
   return refs.some((r) => r.head === true || r.kind === "head");
 }
 
+function uncommittedGraphCell(row, laneCount, rowH, gap) {
+  const width = graphWidth(laneCount, gap);
+  const svg = svgEl("svg", { width, height: rowH, viewBox: `0 0 ${width} ${rowH}` });
+  const mid = rowH / 2;
+  const nx = laneX(row.lane, gap);
+
+  for (const e of row.outgoing) {
+    const x = laneX(e.toLane, gap);
+    const d = `M ${nx} ${mid} C ${nx} ${mid}, ${x} ${mid}, ${x} ${rowH}`;
+    svg.appendChild(svgEl("path", { d, fill: "none", stroke: UNCOMMITTED_GRAY, "stroke-width": 1.5 }));
+  }
+  svg.appendChild(svgEl("circle", { cx: nx, cy: mid, r: DOT_R, fill: UNCOMMITTED_GRAY }));
+  return svg;
+}
+
+function renderUncommittedRow(row, laneCount, ctx) {
+  const rowH = ctx.compact ? ROW_H_COMPACT : ROW_H;
+  const gap = LANE_GAP;
+  const info = h(
+    "div",
+    { class: "flex min-w-0 flex-1 items-center gap-2 px-2" },
+    h("span", { class: "truncate text-[12px] font-medium text-muted-foreground" }, `Uncommitted Changes (${row.count})`),
+  );
+  const el = h(
+    "div",
+    {
+      "data-uncommitted-row": "true",
+      role: "button",
+      tabindex: 0,
+      class: "flex cursor-pointer items-stretch border-b border-border hover:bg-accent",
+      style: `height:${rowH}px`,
+    },
+    uncommittedGraphCell(row, laneCount, rowH, gap),
+    info,
+  );
+  el.addEventListener("click", () => ctx.onUncommittedClick());
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      ctx.onUncommittedClick();
+    }
+  });
+  return el;
+}
+
 function graphCell(row, laneCount, laneColors, rowH, gap) {
   const width = graphWidth(laneCount, gap);
   const svg = svgEl("svg", { width, height: rowH, viewBox: `0 0 ${width} ${rowH}` });
@@ -200,6 +247,10 @@ export function renderGraph(container, layout, ctx) {
   clear(container);
   const pairs = [];
   for (const row of layout.rows) {
+    if (row.isUncommitted) {
+      container.appendChild(renderUncommittedRow(row, layout.laneCount, ctx));
+      continue;
+    }
     const el = renderRow(row, layout.laneCount, ctx);
     container.appendChild(el);
     pairs.push({ commit: row.commit, el });

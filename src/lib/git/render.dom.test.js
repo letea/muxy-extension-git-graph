@@ -295,4 +295,64 @@ describe("renderGraph", () => {
     expect(branchCalls).toEqual([{ name: "v1.0", kind: "tag" }]);
     expect(commitCalls).toEqual([]);
   });
+
+  it("renders a synthetic uncommitted row in gray with the count text, and wires its click handler", () => {
+    const commits = [c("aaa111", [], [{ name: "main", kind: "branch", head: true }])];
+    const layout = assignLanes(commits);
+    const uncommittedRow = {
+      isUncommitted: true,
+      count: 3,
+      lane: layout.rows[0].lane,
+      incoming: [],
+      outgoing: [{ toLane: layout.rows[0].lane }],
+      passing: [],
+    };
+    layout.rows.unshift(uncommittedRow);
+    const container = document.createElement("div");
+    const uncommittedClicks = [];
+    const commitClicks = [];
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: (hash) => commitClicks.push(hash),
+      onBranch: () => {},
+      onUncommittedClick: () => uncommittedClicks.push(true),
+    });
+    const rows = container.querySelectorAll("[data-row], [data-uncommitted-row]");
+    expect(rows).toHaveLength(2);
+    const topRow = container.querySelector("[data-uncommitted-row]");
+    expect(topRow.textContent).toContain("Uncommitted Changes (3)");
+    topRow.click();
+    expect(uncommittedClicks).toEqual([true]);
+    expect(commitClicks).toEqual([]);
+  });
+
+  it("draws the uncommitted row's line and dot in the muted gray palette color", () => {
+    const commits = [c("aaa111", [], [])];
+    const layout = assignLanes(commits);
+    const uncommittedRow = {
+      isUncommitted: true,
+      count: 1,
+      lane: 0,
+      incoming: [],
+      outgoing: [{ toLane: 0 }],
+      passing: [],
+    };
+    layout.rows.unshift(uncommittedRow);
+    const container = document.createElement("div");
+    const laneColors = ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"];
+    renderGraph(container, layout, {
+      laneColors,
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+      onUncommittedClick: () => {},
+    });
+    const topRow = container.querySelector("[data-uncommitted-row]");
+    const svg = topRow.querySelector("svg");
+    const path = svg.querySelector("path");
+    const circle = svg.querySelector("circle");
+    expect(path.getAttribute("stroke")).toBe("#8aa0b0");
+    expect(circle.getAttribute("fill")).toBe("#8aa0b0");
+  });
 });
