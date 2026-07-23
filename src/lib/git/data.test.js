@@ -59,6 +59,15 @@ describe("parseGitLog", () => {
   it("returns [] for empty output", () => {
     expect(parseGitLog("")).toEqual([]);
   });
+
+  it("threads knownRemotes to parseRefs", () => {
+    const stdout = `aaa111${F}${F}Ada${F}2026-07-22T10:00:00+08:00${F}upstream/main${F}Some commit${R}\n`;
+    const commits = parseGitLog(stdout, ["upstream"]);
+    expect(commits[0].refs).toEqual([{ name: "upstream/main", kind: "remote" }]);
+
+    const defaultCommits = parseGitLog(stdout);
+    expect(defaultCommits[0].refs).toEqual([{ name: "upstream/main", kind: "branch" }]);
+  });
 });
 
 describe("parseCommitShow", () => {

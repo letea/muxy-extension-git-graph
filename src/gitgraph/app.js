@@ -16,6 +16,7 @@ export class GitGraphApp {
     this.branchFilter = "";
     this.query = "";
     this.pairs = [];
+    this.maxCount = MAX_COUNT;
   }
 
   async start() {
@@ -86,7 +87,10 @@ export class GitGraphApp {
     try {
       this.refs = await loadRefs();
       if (!this.refs.root) return this.showEmpty("Not a git repository");
-      this.allCommits = await loadGraph({ maxCount: MAX_COUNT });
+      const knownRemotes = this.refs.remote.length
+        ? [...new Set(this.refs.remote.map((r) => r.split("/")[0]))]
+        : ["origin"];
+      this.allCommits = await loadGraph({ maxCount: this.maxCount, knownRemotes });
       if (this.allCommits.length === 0) return this.showEmpty("No commits yet");
       this.populateBranches();
       this.applyView();
@@ -118,7 +122,34 @@ export class GitGraphApp {
       onCommit: (hash) => this.openDetail(hash),
       onBranch: (name, kind) => this.checkoutBranch(name, kind),
     });
+    if (this.allCommits.length >= this.maxCount) {
+      this.graphContainer.appendChild(this.truncationFooter());
+    }
     this.applyQuery();
+  }
+
+  truncationFooter() {
+    return h(
+      "div",
+      {
+        class:
+          "flex items-center justify-center gap-2 border-b border-border px-2.5 py-2 text-[11px] text-muted-foreground",
+      },
+      h("span", null, `Showing first ${this.maxCount} commits`),
+      h(
+        "button",
+        {
+          type: "button",
+          class:
+            "rounded-md bg-surface px-2 py-1 text-[11px] text-foreground hover:bg-accent",
+          onclick: () => {
+            this.maxCount += MAX_COUNT;
+            this.reload();
+          },
+        },
+        "Load more",
+      ),
+    );
   }
 
   applyQuery() {
@@ -160,14 +191,21 @@ export class GitGraphApp {
   }
 
   async checkoutBranch(name, kind) {
-    const ok = await muxy.dialog.confirm({ title: "Checkout branch", message: `Switch to "${name}"?` });
+    const ok = await muxy.dialog.confirm({
+      title: "Checkout branch",
+      message: `Switch to "${name}"?`,
+    });
     if (!ok) return;
-    const res = await checkout(name, kind);
-    if (!res.ok) {
-      await muxy.dialog.alert({ title: "Checkout failed", message: res.message || "Unknown error" });
-      return;
+    try {
+      const res = await checkout(name, kind);
+      if (!res.ok) {
+        await muxy.dialog.alert({ title: "Checkout failed", message: res.message || "Unknown error" });
+        return;
+      }
+      await this.reload();
+    } catch (err) {
+      await muxy.dialog.alert({ title: "Checkout failed", message: String(err?.message || err) });
     }
-    await this.reload();
   }
 
   showMessage(text) {

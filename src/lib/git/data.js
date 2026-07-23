@@ -29,7 +29,7 @@ export function parseRefs(decoration, knownRemotes = ["origin"]) {
   return refs;
 }
 
-export function parseGitLog(stdout) {
+export function parseGitLog(stdout, knownRemotes = ["origin"]) {
   const commits = [];
   for (const chunk of (stdout || "").split(RECORD)) {
     const record = chunk.replace(/^\n+/, "");
@@ -39,7 +39,7 @@ export function parseGitLog(stdout) {
       hash,
       shortHash: hash.slice(0, 7),
       parents: parents ? parents.trim().split(/\s+/).filter(Boolean) : [],
-      refs: parseRefs(decoration),
+      refs: parseRefs(decoration, knownRemotes),
       authorName,
       authorDate,
       subject: subject ?? "",
@@ -78,7 +78,7 @@ export async function loadRefs() {
   };
 }
 
-export async function loadGraph({ maxCount = 300, skip = 0 } = {}) {
+export async function loadGraph({ maxCount = 300, skip = 0, knownRemotes = ["origin"] } = {}) {
   const cwd = await repoRoot();
   const argv = [
     "git", "log", "--all", "--date=iso-strict",
@@ -86,7 +86,7 @@ export async function loadGraph({ maxCount = 300, skip = 0 } = {}) {
     `--max-count=${maxCount}`, `--skip=${skip}`,
   ];
   const { stdout } = await muxy.exec(argv, { cwd });
-  return parseGitLog(stdout);
+  return parseGitLog(stdout, knownRemotes);
 }
 
 export async function loadCommitDetail(hash) {
