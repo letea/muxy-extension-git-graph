@@ -95,9 +95,14 @@ function badge(ref, onBranch, laneColorHex) {
   if (useLaneColor) el.style.backgroundColor = laneColorHex;
   // Branch, remote, and tag refs are all checkout targets; the caller warns
   // about detached HEAD for tags before actually running the checkout.
+  // Checkout requires a double-click — a single click just absorbs the
+  // event (no accidental checkout, and it doesn't fall through to the
+  // row's onCommit either).
   if (ref.kind === "branch" || ref.kind === "remote" || ref.kind === "tag") {
     el.style.cursor = "pointer";
-    el.addEventListener("click", (e) => {
+    el.title = `${ref.name} — double-click to checkout`;
+    el.addEventListener("click", (e) => e.stopPropagation());
+    el.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       onBranch(ref.checkoutName ?? ref.name, ref.kind);
     });

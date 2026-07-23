@@ -186,7 +186,7 @@ describe("renderGraph", () => {
     const badges = [...container.querySelectorAll("[data-row] span")].filter((s) => s.querySelector("svg"));
     expect(badges).toHaveLength(1);
     expect(badges[0].textContent).toBe("3.0.146 | origin");
-    badges[0].click();
+    badges[0].dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     // checkout must target the local branch name, not the merged label
     expect(branchCalls).toEqual([{ name: "3.0.146", kind: "branch" }]);
   });
@@ -228,7 +228,7 @@ describe("renderGraph", () => {
     });
     const badges = [...container.querySelectorAll("[data-row] span")].filter((s) => s.querySelector("svg"));
     expect(badges.map((b) => b.textContent)).toEqual(["main", "origin/develop"]);
-    badges[1].click();
+    badges[1].dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     expect(branchCalls).toEqual([{ name: "origin/develop", kind: "remote" }]);
   });
 
@@ -253,7 +253,7 @@ describe("renderGraph", () => {
     expect(badges[0].className).toContain("bg-primary");
   });
 
-  it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {
+  it("single-clicking a branch badge does nothing (absorbed, not onBranch or onCommit); double-click fires onBranch", () => {
     const commits = [c("aaa111", ["bbb222"], [{ name: "main", kind: "branch", head: true }]), c("bbb222", [])];
     const layout = assignLanes(commits);
     const container = document.createElement("div");
@@ -265,16 +265,17 @@ describe("renderGraph", () => {
       onCommit: (hash) => commitCalls.push(hash),
       onBranch: (name, kind) => branchCalls.push({ name, kind }),
     });
-    // find the branch badge span and click it
     const badge = container.querySelector("[data-row] span");
     badge.click();
-    // onBranch should be called with ref name and kind
+    expect(branchCalls).toEqual([]);
+    expect(commitCalls).toEqual([]);
+
+    badge.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     expect(branchCalls).toEqual([{ name: "main", kind: "branch" }]);
-    // onCommit should NOT be called (stopPropagation prevents it)
     expect(commitCalls).toEqual([]);
   });
 
-  it("clicking a tag badge fires onBranch with name and kind, not onCommit", () => {
+  it("single-clicking a tag badge does nothing; double-click fires onBranch", () => {
     const commits = [c("aaa111", ["bbb222"], [{ name: "v1.0", kind: "tag" }]), c("bbb222", [])];
     const layout = assignLanes(commits);
     const container = document.createElement("div");
@@ -288,6 +289,9 @@ describe("renderGraph", () => {
     });
     const badge = container.querySelector("[data-row] span");
     badge.click();
+    expect(branchCalls).toEqual([]);
+
+    badge.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     expect(branchCalls).toEqual([{ name: "v1.0", kind: "tag" }]);
     expect(commitCalls).toEqual([]);
   });
