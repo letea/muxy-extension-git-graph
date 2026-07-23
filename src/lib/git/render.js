@@ -34,20 +34,24 @@ function colorFor(laneColors, index) {
   return laneColors[index % laneColors.length];
 }
 
-function badge(ref, onBranch) {
+function badge(ref, onBranch, laneColorHex) {
   const kindIcon = ref.kind === "tag" ? "tag" : "git-branch";
   const isHead = ref.head === true || ref.kind === "head";
+  // A tag has no branch of its own — color it like the branch/lane its
+  // commit belongs to, instead of the uniform badge fill other refs get.
+  const useLaneColor = !isHead && ref.kind === "tag" && Boolean(laneColorHex);
   const el = h(
     "span",
     {
       class:
         "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium " +
-        (isHead ? "bg-primary text-primary-foreground" : "bg-accent text-foreground"),
+        (isHead ? "bg-primary text-primary-foreground" : useLaneColor ? "text-primary-foreground" : "bg-accent text-foreground"),
       title: ref.name,
     },
     icon(kindIcon, 11),
     ref.name,
   );
+  if (useLaneColor) el.style.backgroundColor = laneColorHex;
   // Only branch/remote refs are checkout targets in this UI — a tag click
   // would need different UX (checking out a tag detaches HEAD), so tags
   // intentionally get no click handler here.
@@ -89,7 +93,8 @@ export function renderRow(row, laneCount, ctx) {
   const gap = LANE_GAP;
   const c = row.commit;
 
-  const badges = c.refs.map((r) => badge(r, onBranch));
+  const nodeColorHex = colorFor(laneColors, row.color);
+  const badges = c.refs.map((r) => badge(r, onBranch, nodeColorHex));
   const meta = compact
     ? []
     : [

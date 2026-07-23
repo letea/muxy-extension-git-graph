@@ -82,6 +82,39 @@ describe("renderGraph", () => {
     expect(clicked).toEqual(["aaa111", "aaa111"]);
   });
 
+  it("colors a tag badge with its commit's lane color, not the uniform accent", () => {
+    // Two independent-root commits land on two different lanes/colors.
+    const commits = [
+      c("aaa111", [], [{ name: "v1.0", kind: "tag" }]),
+      c("bbb222", [], [{ name: "main", kind: "branch" }]),
+      c("ccc333", ["aaa111"], []), // forces aaa111 and bbb222 into distinct lanes
+    ];
+    const laneColors = ["#111111", "#222222", "#333333", "#444444", "#555555", "#666666", "#777777", "#888888"];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    renderGraph(container, layout, {
+      laneColors,
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+    });
+    const badges = [...container.querySelectorAll("[data-row] span")];
+    const tagBadge = badges.find((b) => b.textContent.includes("v1.0"));
+    const branchBadge = badges.find((b) => b.textContent.includes("main"));
+
+    const tagRow = tagBadge.closest("[data-row]");
+    const rowIndex = layout.rows.findIndex((r) => r.commit.hash === tagRow.dataset.row);
+    const expectedHex = laneColors[layout.rows[rowIndex].color % laneColors.length];
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = expectedHex;
+
+    expect(tagBadge.style.backgroundColor).toBe(probe.style.backgroundColor);
+    expect(tagBadge.className).not.toContain("bg-accent");
+    // A non-tag, non-HEAD badge keeps the uniform accent style, unaffected.
+    expect(branchBadge.className).toContain("bg-accent");
+    expect(branchBadge.style.backgroundColor).toBe("");
+  });
+
   it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {
     const commits = [c("aaa111", ["bbb222"], [{ name: "main", kind: "branch", head: true }]), c("bbb222", [])];
     const layout = assignLanes(commits);
