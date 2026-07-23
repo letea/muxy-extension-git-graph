@@ -273,4 +273,22 @@ describe("renderGraph", () => {
     // onCommit should NOT be called (stopPropagation prevents it)
     expect(commitCalls).toEqual([]);
   });
+
+  it("clicking a tag badge fires onBranch with name and kind, not onCommit", () => {
+    const commits = [c("aaa111", ["bbb222"], [{ name: "v1.0", kind: "tag" }]), c("bbb222", [])];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    const branchCalls = [];
+    const commitCalls = [];
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: (hash) => commitCalls.push(hash),
+      onBranch: (name, kind) => branchCalls.push({ name, kind }),
+    });
+    const badge = container.querySelector("[data-row] span");
+    badge.click();
+    expect(branchCalls).toEqual([{ name: "v1.0", kind: "tag" }]);
+    expect(commitCalls).toEqual([]);
+  });
 });

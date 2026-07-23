@@ -125,7 +125,7 @@ export class GitGraphApp {
       laneColors: this.laneColors(),
       compact: this.compact,
       onCommit: (hash) => this.openDetail(hash),
-      onBranch: (name, kind) => this.checkoutBranch(name, kind),
+      onBranch: (name, kind) => this.checkoutRef(name, kind),
     });
     if (this.allCommits.length >= this.maxCount) {
       this.graphContainer.appendChild(this.truncationFooter());
@@ -198,11 +198,12 @@ export class GitGraphApp {
     }
   }
 
-  async checkoutBranch(name, kind) {
-    const ok = await muxy.dialog.confirm({
-      title: "Checkout branch",
-      message: `Switch to "${name}"?`,
-    });
+  async checkoutRef(name, kind) {
+    const ok = await muxy.dialog.confirm(
+      kind === "tag"
+        ? { title: "Checkout tag", message: `Check out tag "${name}"? This leaves you in a detached HEAD state.` }
+        : { title: "Checkout branch", message: `Switch to "${name}"?` },
+    );
     if (!ok) return;
     try {
       const res = await checkout(name, kind);

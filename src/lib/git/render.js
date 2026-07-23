@@ -93,10 +93,9 @@ function badge(ref, onBranch, laneColorHex) {
     ref.name,
   );
   if (useLaneColor) el.style.backgroundColor = laneColorHex;
-  // Only branch/remote refs are checkout targets in this UI — a tag click
-  // would need different UX (checking out a tag detaches HEAD), so tags
-  // intentionally get no click handler here.
-  if (ref.kind === "branch" || ref.kind === "remote") {
+  // Branch, remote, and tag refs are all checkout targets; the caller warns
+  // about detached HEAD for tags before actually running the checkout.
+  if (ref.kind === "branch" || ref.kind === "remote" || ref.kind === "tag") {
     el.style.cursor = "pointer";
     el.addEventListener("click", (e) => {
       e.stopPropagation();
