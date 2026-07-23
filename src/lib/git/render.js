@@ -122,11 +122,13 @@ function graphCell(row, laneCount, laneColors, rowH, gap) {
   }
   for (const e of row.incoming) {
     const x = laneX(e.fromLane, gap);
-    svg.appendChild(svgEl("line", { x1: x, y1: 0, x2: nx, y2: mid, stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
+    const d = `M ${x} 0 C ${x} ${mid}, ${nx} ${mid}, ${nx} ${mid}`;
+    svg.appendChild(svgEl("path", { d, fill: "none", stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
   }
   for (const e of row.outgoing) {
     const x = laneX(e.toLane, gap);
-    svg.appendChild(svgEl("line", { x1: nx, y1: mid, x2: x, y2: rowH, stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
+    const d = `M ${nx} ${mid} C ${nx} ${mid}, ${x} ${mid}, ${x} ${rowH}`;
+    svg.appendChild(svgEl("path", { d, fill: "none", stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
   }
   svg.appendChild(svgEl("circle", { cx: nx, cy: mid, r: DOT_R, fill: colorFor(laneColors, row.color) }));
   return svg;
