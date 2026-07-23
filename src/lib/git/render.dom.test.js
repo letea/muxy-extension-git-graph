@@ -116,6 +116,52 @@ describe("renderGraph", () => {
     expectFor(remoteBadge, "bbb222");
   });
 
+  it("orders badges branch, then remote, then tag regardless of input order", () => {
+    const commits = [
+      c("aaa111", [], [
+        { name: "v1.0", kind: "tag" },
+        { name: "origin/main", kind: "remote" },
+        { name: "feature", kind: "branch" },
+      ]),
+    ];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+    });
+    const badgeTexts = [...container.querySelectorAll("[data-row] span")]
+      .filter((s) => s.querySelector("svg"))
+      .map((b) => b.textContent);
+    expect(badgeTexts).toEqual(["feature", "origin/main", "v1.0"]);
+  });
+
+  it("keeps a HEAD branch first among branches, preserving decoration order within each tier", () => {
+    // Mirrors git's "HEAD -> main, origin/main, tag: v1.0, feature/x" decoration order.
+    const commits = [
+      c("aaa111", [], [
+        { name: "main", kind: "branch", head: true },
+        { name: "origin/main", kind: "remote" },
+        { name: "v1.0", kind: "tag" },
+        { name: "feature/x", kind: "branch" },
+      ]),
+    ];
+    const layout = assignLanes(commits);
+    const container = document.createElement("div");
+    renderGraph(container, layout, {
+      laneColors: ["#111", "#222", "#333", "#444", "#555", "#666", "#777", "#888"],
+      compact: false,
+      onCommit: () => {},
+      onBranch: () => {},
+    });
+    const badgeTexts = [...container.querySelectorAll("[data-row] span")]
+      .filter((s) => s.querySelector("svg"))
+      .map((b) => b.textContent);
+    expect(badgeTexts).toEqual(["main", "feature/x", "origin/main", "v1.0"]);
+  });
+
   it("clicking a branch badge fires onBranch with name and kind, not onCommit", () => {
     const commits = [c("aaa111", ["bbb222"], [{ name: "main", kind: "branch", head: true }]), c("bbb222", [])];
     const layout = assignLanes(commits);

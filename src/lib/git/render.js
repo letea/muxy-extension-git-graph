@@ -34,6 +34,15 @@ function colorFor(laneColors, index) {
   return laneColors[index % laneColors.length];
 }
 
+// Badge display order: branch (and the attached-HEAD branch it rides on)
+// first, then remote, then tag. Stable sort preserves each ref's original
+// relative order within its own tier.
+const REF_KIND_ORDER = { branch: 0, head: 0, remote: 1, tag: 2 };
+
+function sortRefs(refs) {
+  return [...refs].sort((a, b) => (REF_KIND_ORDER[a.kind] ?? 3) - (REF_KIND_ORDER[b.kind] ?? 3));
+}
+
 function badge(ref, onBranch, laneColorHex) {
   const kindIcon = ref.kind === "tag" ? "tag" : "git-branch";
   const isHead = ref.head === true || ref.kind === "head";
@@ -95,7 +104,7 @@ export function renderRow(row, laneCount, ctx) {
   const c = row.commit;
 
   const nodeColorHex = colorFor(laneColors, row.color);
-  const badges = c.refs.map((r) => badge(r, onBranch, nodeColorHex));
+  const badges = sortRefs(c.refs).map((r) => badge(r, onBranch, nodeColorHex));
   const meta = compact
     ? []
     : [
