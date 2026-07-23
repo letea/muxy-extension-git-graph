@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { loadRefs, loadGraph, checkout } from "@/lib/git/data";
+import { loadRefs, loadGraph, loadRemoteNames, checkout } from "@/lib/git/data";
 
 const F = "\x1f";
 const R = "\x1e";
@@ -54,6 +54,29 @@ describe("loadGraph", () => {
     expect(argv).toContain("--max-count=50");
     expect(opts).toEqual({ cwd: "/repo" });
     expect(commits[0].hash).toBe("aaa111");
+  });
+});
+
+describe("loadRemoteNames", () => {
+  it("runs `git remote` and parses one name per line", async () => {
+    globalThis.muxy.exec = vi.fn(async () => ({ stdout: "origin\nupstream\n", stderr: "", exitCode: 0 }));
+    const names = await loadRemoteNames();
+    const [argv, opts] = globalThis.muxy.exec.mock.calls[0];
+    expect(argv).toEqual(["git", "remote"]);
+    expect(opts).toEqual({ cwd: "/repo" });
+    expect(names).toEqual(["origin", "upstream"]);
+  });
+
+  it("returns [] for a repo with no remotes", async () => {
+    globalThis.muxy.exec = vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 }));
+    expect(await loadRemoteNames()).toEqual([]);
+  });
+
+  it("tolerates exec rejection", async () => {
+    globalThis.muxy.exec = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    expect(await loadRemoteNames()).toEqual([]);
   });
 });
 

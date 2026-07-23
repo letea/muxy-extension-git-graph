@@ -92,6 +92,16 @@ export async function loadGraph({ maxCount = 300, skip = 0, knownRemotes = ["ori
   return parseGitLog(stdout, knownRemotes);
 }
 
+export async function loadRemoteNames() {
+  const cwd = await repoRoot();
+  try {
+    const { stdout } = await muxy.exec(["git", "remote"], { cwd });
+    return (stdout || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export async function loadCommitDetail(hash) {
   const cwd = await repoRoot();
   const argv = [

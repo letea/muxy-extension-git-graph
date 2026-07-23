@@ -1,6 +1,6 @@
 import { clear, h } from "@/lib/dom";
 import { icon } from "@/lib/icons";
-import { loadRefs, loadGraph, loadCommitDetail, checkout } from "@/lib/git/data";
+import { loadRefs, loadGraph, loadRemoteNames, loadCommitDetail, checkout } from "@/lib/git/data";
 import { assignLanes } from "@/lib/git/layout";
 import { matchesQuery, tipHashForBranch, reachableFrom } from "@/lib/git/filter";
 import { renderGraph, LANE_COLORS } from "@/lib/git/render";
@@ -91,9 +91,9 @@ export class GitGraphApp {
       this.refs = await loadRefs();
       if (token !== this.reloadToken) return;
       if (!this.refs.root) return this.showEmpty("Not a git repository");
-      const knownRemotes = this.refs.remote.length
-        ? [...new Set(this.refs.remote.map((r) => r.split("/")[0]))]
-        : ["origin"];
+      const remoteNames = await loadRemoteNames();
+      if (token !== this.reloadToken) return;
+      const knownRemotes = remoteNames.length ? remoteNames : ["origin"];
       this.allCommits = await loadGraph({ maxCount: this.maxCount, knownRemotes });
       if (token !== this.reloadToken) return;
       if (this.allCommits.length === 0) return this.showEmpty("No commits yet");
