@@ -69,7 +69,10 @@ async function repoRoot() {
 
 export async function loadRefs() {
   const info = await muxy.git.repoInfo();
-  const [local, remote] = await Promise.all([muxy.git.branches(), muxy.git.remoteBranches()]);
+  const [local, remote] = await Promise.all([
+    muxy.git.branches().catch(() => []),
+    muxy.git.remoteBranches().catch(() => []),
+  ]);
   return {
     root: info?.root ?? null,
     current: info?.currentBranch ?? null,

@@ -25,6 +25,19 @@ describe("loadRefs", () => {
       remote: ["origin/main"],
     });
   });
+
+  it("tolerates remoteBranches rejection (no origin remote)", async () => {
+    globalThis.muxy.git.remoteBranches = vi.fn(async () => {
+      throw new Error("fatal: 'origin' does not appear to be a git repository");
+    });
+    const refs = await loadRefs();
+    expect(refs).toEqual({
+      root: "/repo",
+      current: "main",
+      local: ["main", "feature/x"],
+      remote: [],
+    });
+  });
 });
 
 describe("loadGraph", () => {
