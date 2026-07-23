@@ -110,6 +110,10 @@ function badge(ref, onBranch, laneColorHex) {
   return el;
 }
 
+function isHeadCommit(refs) {
+  return refs.some((r) => r.head === true || r.kind === "head");
+}
+
 function graphCell(row, laneCount, laneColors, rowH, gap) {
   const width = graphWidth(laneCount, gap);
   const svg = svgEl("svg", { width, height: rowH, viewBox: `0 0 ${width} ${rowH}` });
@@ -130,7 +134,15 @@ function graphCell(row, laneCount, laneColors, rowH, gap) {
     const d = `M ${nx} ${mid} C ${nx} ${mid}, ${x} ${mid}, ${x} ${rowH}`;
     svg.appendChild(svgEl("path", { d, fill: "none", stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
   }
-  svg.appendChild(svgEl("circle", { cx: nx, cy: mid, r: DOT_R, fill: colorFor(laneColors, row.color) }));
+  const nodeColor = colorFor(laneColors, row.color);
+  // The checked-out commit gets a ring around a black center instead of a
+  // filled dot, like VS Code's Git Graph, so the current HEAD position
+  // stands out at a glance among the other commits.
+  if (isHeadCommit(row.commit.refs)) {
+    svg.appendChild(svgEl("circle", { cx: nx, cy: mid, r: DOT_R + 1.5, fill: "#000", stroke: nodeColor, "stroke-width": 2 }));
+  } else {
+    svg.appendChild(svgEl("circle", { cx: nx, cy: mid, r: DOT_R, fill: nodeColor }));
+  }
   return svg;
 }
 
