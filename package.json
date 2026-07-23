@@ -21,10 +21,7 @@
         "entry": "panel/index.html",
         "mode": "pinned",
         "position": "right",
-        "icon": { "symbol": "point.3.connected.trianglepath.dotted" },
-        "headerButtons": [
-          { "id": "refresh", "command": "refresh-graph", "icon": { "symbol": "arrow.clockwise" }, "tooltip": "Refresh" }
-        ]
+        "icon": { "symbol": "point.3.connected.trianglepath.dotted" }
       }
     ],
     "commands": [
