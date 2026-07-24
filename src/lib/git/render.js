@@ -87,7 +87,7 @@ function badge(ref, onBranch, laneColorHex) {
     "span",
     {
       class:
-        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium " +
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-medium " +
         (isHead ? "bg-primary text-primary-foreground" : useLaneColor ? "text-primary-foreground" : "bg-accent text-foreground"),
       title: ref.name,
     },
