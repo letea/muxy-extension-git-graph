@@ -174,7 +174,10 @@ function graphCell(row, laneCount, laneColors, rowH, gap) {
   for (const e of row.incoming) {
     const x = laneX(e.fromLane, gap);
     const d = `M ${x} 0 C ${x} ${mid}, ${nx} ${mid}, ${nx} ${mid}`;
-    svg.appendChild(svgEl("path", { d, fill: "none", stroke: colorFor(laneColors, e.color), "stroke-width": 1.5 }));
+    // A null/undefined color marks the edge coming down from the synthetic
+    // "Uncommitted Changes" row, which is always gray rather than a lane color.
+    const stroke = e.color == null ? UNCOMMITTED_GRAY : colorFor(laneColors, e.color);
+    svg.appendChild(svgEl("path", { d, fill: "none", stroke, "stroke-width": 1.5 }));
   }
   for (const e of row.outgoing) {
     const x = laneX(e.toLane, gap);

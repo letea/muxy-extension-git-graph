@@ -118,11 +118,10 @@ export class GitGraphApp {
     this.branchSelect.value = this.branchFilter;
   }
 
-  headLaneFor(layout) {
-    const headRow = layout.rows.find(
+  findHeadRow(layout) {
+    return layout.rows.find(
       (r) => !r.isUncommitted && r.commit.refs.some((ref) => ref.head === true || ref.kind === "head"),
     );
-    return headRow ? headRow.lane : null;
   }
 
   applyView() {
@@ -133,7 +132,9 @@ export class GitGraphApp {
     }
     const layout = assignLanes(commits);
     if (this.uncommittedCount > 0) {
-      const headLane = this.headLaneFor(layout);
+      const headRow = this.findHeadRow(layout);
+      const headLane = headRow ? headRow.lane : null;
+      if (headRow) headRow.incoming = [...headRow.incoming, { fromLane: headLane, color: null }];
       layout.rows.unshift({
         isUncommitted: true,
         count: this.uncommittedCount,
