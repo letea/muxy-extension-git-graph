@@ -25,12 +25,12 @@
       }
     ],
     "commands": [
-      { "id": "open-graph-tab", "title": "Git Graph: Open Graph", "action": { "kind": "openTab", "tabType": "graph" }, "defaultShortcut": "cmd+shift+g" },
-      { "id": "toggle-graph-panel", "title": "Git Graph: Toggle Panel", "action": { "kind": "togglePanel", "panel": "graph" } },
+      { "id": "open-graph-tab", "title": "Git Graph: Open Graph", "action": { "kind": "openTab", "tabType": "graph" } },
+      { "id": "toggle-graph-panel", "title": "Git Graph: Toggle Panel", "action": { "kind": "togglePanel", "panel": "graph" }, "defaultShortcut": "cmd+shift+g" },
       { "id": "refresh-graph", "title": "Git Graph: Refresh" }
     ],
     "topbarItems": [
-      { "id": "graph", "command": "open-graph-tab", "icon": { "symbol": "point.3.connected.trianglepath.dotted" }, "tooltip": "Open Git Graph" }
+      { "id": "graph", "command": "toggle-graph-panel", "icon": { "symbol": "point.3.connected.trianglepath.dotted" }, "tooltip": "Toggle Git Graph" }
     ]
   },
   "name": "git-graph",
